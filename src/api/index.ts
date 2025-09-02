@@ -1,48 +1,42 @@
 import { Console, Effect, Schedule } from "effect";
+import { Hono } from "hono";
 
-const logEffect = Effect.gen(function* () {
-  yield* Console.log("Hello, from a Fiber!");
+const logFromEndpoint = Effect.gen(function* () {
+  yield* Console.log("Logging from endpoint..");
 });
 
-const eff = Effect.repeat(logEffect, {
-  times: 10,
-  schedule: Schedule.spaced(100),
-});
-
-const routeEffect = Effect.gen(function* () {
-  const res = yield* eff.pipe(Effect.map((times) => String(times)));
-
-  if (res !== "10") {
-    return yield* Effect.fail(new Error("Effect an awkward amount of times!"));
-  }
-
-  return yield* Effect.succeed("Run 10 times!");
-});
-
-const createServer = Effect.gen(function* () {
-  const bunServer = Bun.serve({
-    port: 8000,
-    routes: {
-      "/health": () => new Response("OK"),
-      "/log": async () => {
-        try {
-          const result = await Effect.runPromise(routeEffect);
-          return new Response(result);
-        } catch (err: unknown) {
-          if (err instanceof Error) {
-            console.error(err);
-            return new Response(`Failed with: ${err.message}`);
-          }
-
-          return new Response("Unknown error.");
-        }
-      },
-    },
+const logEndpoint = Effect.gen(function* () {
+  const times = yield* Effect.repeat(logFromEndpoint, {
+    times: 3,
+    schedule: Schedule.spaced(100),
   });
 
-  yield* Console.log(`Started Bun HTTP server at ${bunServer.url}`);
-
-  return yield* Effect.succeed(bunServer);
+  return yield* Effect.succeed(times);
 });
 
-export { createServer };
+const healthEndpoint = Effect.gen(function* () {
+  const cpuUsage = process.cpuUsage().system;
+  const uptime = process.uptime();
+
+  return yield* Effect.succeed({
+    cpuUsage,
+    uptime,
+    status: "healthy",
+  });
+});
+
+export const createHono = Effect.gen(function* () {
+  const app = new Hono();
+
+  app.get("/health", async (ctx) => {
+    const result = await Effect.runPromise(healthEndpoint);
+    return ctx.json(result);
+  });
+
+  app.get("/log", async (ctx) => {
+    const result = await Effect.runPromise(logEndpoint);
+    return ctx.json({ times: result });
+  });
+
+  return yield* Effect.succeed(app);
+});
