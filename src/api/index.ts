@@ -19,7 +19,7 @@ const routeEffect = Effect.gen(function* () {
   return yield* Effect.succeed("Run 10 times!");
 });
 
-function createBunServer() {
+const createServer = Effect.gen(function* () {
   const bunServer = Bun.serve({
     port: 8000,
     routes: {
@@ -39,8 +39,10 @@ function createBunServer() {
       },
     },
   });
-  console.log(`Server is running on ${bunServer.url}`);
-  return bunServer;
-}
 
-export { createBunServer };
+  yield* Console.log(`Started Bun HTTP server at ${bunServer.url}`);
+
+  return yield* Effect.succeed(bunServer);
+});
+
+export { createServer };
