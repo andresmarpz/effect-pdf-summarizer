@@ -3,7 +3,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun run --watch src/index.ts"
+    "dev": "bun run --watch src/main.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.2",
@@ -13,6 +13,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@effect/platform-bun": "^0.79.0",
     "effect": "^3.17.10"
   }
 }
